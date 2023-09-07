@@ -726,6 +726,15 @@ class Parser(argparse.ArgumentParser):
         sys.stderr.flush()
         sys.exit(1)
 
+  @staticmethod
+  def _format_arg(arg, positional=False):
+    if arg.metavar and isinstance(arg.metavar,  (list, tuple)):
+        if positional:
+          raise Exception("List-like metavars not supported for positional arguments")
+        else:
+          return ' '.join(arg.metavar)
+    return (arg.metavar or arg.dest)
+
   def format_usage(self):
     argument_list = [ ]
     trailing_ellipsis = ''
@@ -733,10 +742,7 @@ class Parser(argparse.ArgumentParser):
       argument_list.append(self._subparsers._group_actions[0].dest)
       trailing_ellipsis = ' ...'
     for arg in self._positionals._group_actions:
-      if arg.metavar:
-        argument_list.append(' '.join(arg.metavar))
-      else:
-        argument_list.append(arg.dest)
+      argument_list.append(Parser._format_arg(arg, positional=True))
     return self.prog + ' ' + ' '.join(argument_list) + ' [ options ]' + trailing_ellipsis
 
   def print_help(self, file=None):
@@ -775,7 +781,7 @@ class Parser(argparse.ArgumentParser):
       usage += '[ options ]'
       # Find compulsory input arguments
       for arg in self._positionals._group_actions:
-        usage += ' ' + arg.dest
+        usage += ' ' + Parser._format_arg(arg, positional=True)
     # Unfortunately this can line wrap early because textwrap is counting each
     #   underlined character as 3 characters when calculating when to wrap
     # Fix by underlining after the fact
@@ -786,10 +792,7 @@ class Parser(argparse.ArgumentParser):
       text += '\n'
     for arg in self._positionals._group_actions:
       line = '        '
-      if arg.metavar:
-        name = " ".join(arg.metavar)
-      else:
-        name = arg.dest
+      name = Parser._format_arg(arg, positional=True)
       line += name + ' '*(max(13-len(name), 1)) + arg.help
       text += wrapper_args.fill(line).replace(name, underline(name), 1) + '\n'
       text += '\n'
@@ -820,10 +823,7 @@ class Parser(argparse.ArgumentParser):
         group_text += '  ' + underline('/'.join(option.option_strings))
         if option.metavar:
           group_text += ' '
-          if isinstance(option.metavar, tuple):
-            group_text += ' '.join(option.metavar)
-          else:
-            group_text += option.metavar
+          group_text += Parser._format_arg(option)
         elif option.nargs:
           if isinstance(option.nargs, int):
             group_text += (' ' + option.dest.upper())*option.nargs
@@ -946,10 +946,7 @@ class Parser(argparse.ArgumentParser):
     if self._subparsers:
       text += '-  *' + self._subparsers._group_actions[0].dest + '*: ' + self._subparsers._group_actions[0].help + '\n'
     for arg in self._positionals._group_actions:
-      if arg.metavar:
-        name = arg.metavar
-      else:
-        name = arg.dest
+      name = Parser._format_arg(arg, positional=True)
       text += '-  *' + name + '*: ' + arg.help + '\n\n'
     if self._description:
       text += '## Description\n\n'
@@ -971,10 +968,7 @@ class Parser(argparse.ArgumentParser):
         option_text = '/'.join(option.option_strings)
         if option.metavar:
           option_text += ' '
-          if isinstance(option.metavar, tuple):
-            option_text += ' '.join(option.metavar)
-          else:
-            option_text += option.metavar
+          option_text += Parser._format_arg(option)
         group_text += '+ **-' + option_text + '**'
         if isinstance(option, argparse._AppendAction):
           group_text += '  *(multiple uses permitted)*'
@@ -1026,10 +1020,7 @@ class Parser(argparse.ArgumentParser):
     if self._subparsers:
       text += '-  *' + self._subparsers._group_actions[0].dest + '*: ' + self._subparsers._group_actions[0].help + '\n'
     for arg in self._positionals._group_actions:
-      if arg.metavar:
-        name = arg.metavar
-      else:
-        name = arg.dest
+      name = Parser._format_arg(arg, positional=True)
       text += '-  *' + (' '.join(name) if isinstance(name, tuple) else name)  + '*: ' + arg.help.replace('|', '\\|') + '\n'
     text += '\n'
     if self._description:
@@ -1054,10 +1045,7 @@ class Parser(argparse.ArgumentParser):
         option_text = '/'.join(option.option_strings)
         if option.metavar:
           option_text += ' '
-          if isinstance(option.metavar, tuple):
-            option_text += ' '.join(option.metavar)
-          else:
-            option_text += option.metavar
+          option_text += Parser._format_arg(option)
         group_text += '\n'
         group_text += '- **' + option_text + '**'
         if isinstance(option, argparse._AppendAction):
